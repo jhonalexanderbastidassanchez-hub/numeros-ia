@@ -1,19 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
 <head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconocedor MNIST | IA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --primary: #0f172a;
+            --primary-hover: #334155;
+            --border: #e2e8f0;
+            --success: #059669;
+            --error: #dc2626;
+        }
 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 32px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            min-height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #fafafa;
+            transition: all 0.2s ease;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .upload-area.dragover, .upload-area:hover {
+            border-color: var(--primary);
+            background: #f1f5f9;
+        }
+
+        .input-oculto {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        label.preview-caja {
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            padding: 36px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .preview-caja img {
+            max-width: 130px;
+            max-height: 130px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: none;
+            object-fit: contain;
+            background: white;
+            border: 1px solid var(--border);
+        }
+
+        #textoPreview {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        #nombreArchivo {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        #resultado {
+            margin-top: 24px;
+            min-height: 54px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .numero-destacado {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--success);
+            margin-bottom: 4px;
+        }
+
+        .confianza {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .error-text {
+            color: var(--error);
+            font-size: 14px;
+            font-weight: 500;
+        }
+    </style>
+</head>
 <body>
-    <div class="App">
-        <header class="App-header">
-            <img src="{{ url_for('static', filename='Octocat.png') }}" class="App-logo" alt="logo" />
-            <p>
-                GitHub Codespaces <span class="heart">♥️</span> Flask
-            </p>
-            <p class="small">
-                Edit <code>templates/index.html</code> and refresh to see your changes!
-            </p>
-        </header>
-    </div>
-</body>
 
+    <div class="container">
+        <h1>Reconocedor de Números</h1>
+        <p class="subtitle">Carga una imagen de un dígito escrito a mano (0-9) para ser analizada por la red neuronal.</p>
+
+        <form id="formulario" novalidate>
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="inputImagen" class="input-oculto" accept="image/*">
+                <label for="inputImagen" class="preview-caja">
+                    <img id="preview" alt="Previsualización">
+                    <span id="textoPreview">Haz clic o arrastra una imagen aquí</span>
+                    <span id="nombreArchivo"></span>
+                </label>
+            </div>
+            
+            <button type="submit" id="btnEnviar">Analizar Imagen</button>
+        </form>
+
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        const inputImagen = document.getElementById('inputImagen');
+        const uploadArea = document.getElementById('uploadArea');
+        const preview = document.getElementById('preview');
+        const textoPreview = document.getElementById('textoPreview');
+        const nombreArchivo = document.getElementById('nombreArchivo');
+        const formulario = document.getElementById('formulario');
+        const btnEnviar = document.getElementById('btnEnviar');
+        const divResultado = document.getElementById('resultado');
+
+        let archivoActual = null;
+
+        function cargarVistaPrevia(file) {
+            if (!file) return;
+            archivoActual = file;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                textoPreview.style.display = 'none';
+                nombreArchivo.textContent = file.name;
+                nombreArchivo.style.display = 'block';
+                divResultado.innerHTML = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        inputImagen.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                cargarVistaPrevia(e.target.files[0]);
+            }
+        });
+
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                cargarVistaPrevia(e.dataTransfer.files[0]);
+            }
+        });
+
+        formulario.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (!archivoActual) {
+                divResultado.innerHTML = `<div class="error-text">Por favor selecciona una imagen primero.</div>`;
+                return;
+            }
+
+            btnEnviar.disabled = true;
+            btnEnviar.textContent = 'Procesando modelo...';
+            divResultado.innerHTML = '';
+
+            const formData = new FormData();
+            formData.append('imagen', archivoActual);
+
+            try {
+                const response = await fetch('/predecir', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+
+                if (response.ok) {
+                    divResultado.innerHTML = `
+                        <div class="numero-destacado">¡Es un ${data.numero_predicho}!</div>
+                        <div class="confianza">Nivel de confianza: ${data.confianza}%</div>
+                    `;
+                } else {
+                    divResultado.innerHTML = `<div class="error-text">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                divResultado.innerHTML = `<div class="error-text">Error de conexión con el servidor.</div>`;
+            } finally {
+                btnEnviar.disabled = false;
+                btnEnviar.textContent = 'Analizar Imagen';
+            }
+        });
+    </script>
+</body>
 </html>
